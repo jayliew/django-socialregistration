@@ -26,6 +26,9 @@ class FacebookProfile(models.Model):
 class TwitterProfile(models.Model):
     user = models.ForeignKey(User)
     site = models.ForeignKey(Site, default=Site.objects.get_current)
+    oauth_access_key = models.CharField(max_length=255)
+    oauth_access_secret = models.CharField(max_length=255)
+    
     twitter_id = models.PositiveIntegerField()
     
     def __unicode__(self):

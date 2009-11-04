@@ -135,15 +135,31 @@ def twitter(request):
     
     user = authenticate(twitter_id=user_info['id'])
     
-    if user is None:
-        profile = TwitterProfile(twitter_id=user_info['id'])
+    if user is None: # if this is a new user, set it up
+        profile = TwitterProfile(twitter_id=user_info['id'],
+                                 oauth_access_key=request.session['oauth_access_key'],
+                                 oauth_access_secret=request.session['oauth_access_secret'])
+
+        del request.session['oauth_access_key']       # don't need these anymore
+        del request.session['oauth_access_secret'] # after stuffing TwitterProfile
+
         user = User()
         request.session['socialregistration_profile'] = profile
         request.session['socialregistration_user'] = user
+
         request.session['next'] = _get_next(request)
         return HttpResponseRedirect(reverse('socialregistration_setup'))
-
+    
     login(request, user)
+
+    # @NA should probably throw this in a try catch block
+    profile = TwitterProfile.objects.get(user=user) 
+
+    profile.oauth_access_key = request.session['oauth_access_key']
+    profile.oauth_access_secret = request.session['oauth_access_secret']
+
+    del request.session['oauth_access_key']       # don't need these anymore
+    del request.session['oauth_access_secret'] # after stuffing TwitterProfile
     
     return HttpResponseRedirect(_get_next(request))
 
@@ -183,6 +199,9 @@ def oauth_callback(request, consumer_key=None, secret_key=None,
         return render_to_response(
             template, extra_context, context_instance=RequestContext(request)
         )
+    
+    request.session['oauth_access_key'] = client._token.key       # i.e. to be saved in
+    request.session['oauth_access_secret'] = client._token.secret # TwitterProfile or other OAuth SP
     
     # We're redirecting to the setup view for this oauth service
     return HttpResponseRedirect(reverse(client.callback_url))
