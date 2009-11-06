@@ -141,7 +141,7 @@ def twitter(request):
                                  oauth_access_secret=request.session['oauth_access_secret'])
 
         del request.session['oauth_access_key']       # don't need these anymore
-        del request.session['oauth_access_secret'] # after stuffing TwitterProfile
+        del request.session['oauth_access_secret']    # after stuffing TwitterProfile
 
         user = User()
         request.session['socialregistration_profile'] = profile
@@ -152,14 +152,20 @@ def twitter(request):
     
     login(request, user)
 
-    # @NA should probably throw this in a try catch block
-    profile = TwitterProfile.objects.get(user=user) 
-
+    try:
+        profile = TwitterProfile.objects.get(user=user) 
+    except TwitterProfile.DoesNotExist:
+        # This should always work, because a TwitterProfile is created for each
+        # user when he/she signs up the first time
+        pass
+    
+    # just in case the access key/secret changes at some point after user registers,
+    # store the new values
     profile.oauth_access_key = request.session['oauth_access_key']
     profile.oauth_access_secret = request.session['oauth_access_secret']
 
     del request.session['oauth_access_key']       # don't need these anymore
-    del request.session['oauth_access_secret'] # after stuffing TwitterProfile
+    del request.session['oauth_access_secret']    # after stuffing TwitterProfile
     
     return HttpResponseRedirect(_get_next(request))
 
